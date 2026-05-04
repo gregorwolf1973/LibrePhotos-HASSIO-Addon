@@ -22,7 +22,6 @@ RUN apk add --no-cache \
     imagemagick \
     exiftool \
     libraw \
-    dcraw \
     tzdata \
     shadow \
     su-exec
