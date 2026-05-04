@@ -24,24 +24,30 @@ RUN apk add --no-cache \
     libraw \
     tzdata \
     shadow \
-    su-exec
+    su-exec \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    openssl-dev \
+    postgresql16-dev
 
 # ── PostgreSQL setup ─────────────────────────────────────────────────────────
 RUN mkdir -p /var/lib/postgresql/data \
     && chown -R postgres:postgres /var/lib/postgresql
 
-# ── LibrePhotos Backend ───────────────────────────────────────────────────────
-WORKDIR /opt/librephotos
-
-# Clone backend
+# ── LibrePhotos Monorepo clonen ───────────────────────────────────────────────
 RUN apk add --no-cache git && \
-    git clone --depth 1 https://github.com/LibrePhotos/librephotos.git /opt/librephotos/backend && \
+    git clone --depth 1 https://github.com/LibrePhotos/librephotos.git /opt/librephotos/repo && \
     apk del git
+
+# Backend liegt unter apps/backend/
+WORKDIR /opt/librephotos/repo/apps/backend
 
 # Install Python dependencies
 RUN python3 -m venv /opt/librephotos/venv && \
     /opt/librephotos/venv/bin/pip install --upgrade pip && \
-    /opt/librephotos/venv/bin/pip install -r /opt/librephotos/backend/requirements.txt
+    /opt/librephotos/venv/bin/pip install -r /opt/librephotos/repo/apps/backend/requirements.txt
 
 # ── LibrePhotos Frontend ──────────────────────────────────────────────────────
 RUN apk add --no-cache git && \
@@ -51,7 +57,8 @@ RUN apk add --no-cache git && \
     npm install && \
     npm run build && \
     mkdir -p /opt/librephotos/static && \
-    cp -r /opt/librephotos/frontend/build/* /opt/librephotos/static/ && \
+    cp -r /opt/librephotos/frontend/dist/* /opt/librephotos/static/ 2>/dev/null || \
+    cp -r /opt/librephotos/frontend/build/* /opt/librephotos/static/ 2>/dev/null || true && \
     rm -rf /opt/librephotos/frontend/node_modules
 
 # ── Nginx config ──────────────────────────────────────────────────────────────

@@ -37,7 +37,7 @@ if ! id -u librephotos &>/dev/null; then
 fi
 
 chown -R librephotos:librephotos \
-    /opt/librephotos/backend \
+    /opt/librephotos/repo \
     /data/librephotos
 
 # ── PostgreSQL initialisieren ─────────────────────────────────────────────────
@@ -66,7 +66,7 @@ bashio::log.info "Django Datenbank-Migrationen werden ausgeführt..."
 su-exec postgres pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql_init.log start -w
 sleep 2
 
-cd /opt/librephotos/backend
+cd /opt/librephotos/repo/apps/backend
 su-exec librephotos /opt/librephotos/venv/bin/python manage.py migrate --noinput || \
     bashio::log.warning "Migrations hatten Fehler (könnten beim ersten Start normal sein)"
 
