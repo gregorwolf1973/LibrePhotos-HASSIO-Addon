@@ -1,0 +1,35 @@
+name: "LibrePhotos"
+description: "Selbst gehostete Fotoverwaltung mit KI-Gesichtserkennung und automatischer Klassifizierung"
+version: "0.01"
+url: "https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon"
+slug: "librephotos"
+init: false
+arch:
+  - amd64
+  - aarch64
+startup: services
+boot: auto
+ingress: true
+ingress_port: 3000
+panel_icon: "mdi:image-multiple"
+panel_title: "LibrePhotos"
+host_network: false
+apparmor: false
+options:
+  scan_directory: "/media/photos"
+  db_password: "LibrePhotos1234"
+  workers: 2
+  log_level: "info"
+schema:
+  scan_directory: str
+  db_password: str
+  workers: int(1,8)
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+map:
+  - media:rw
+  - config:rw
+  - share:rw
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: "LibrePhotos Web-Interface"
