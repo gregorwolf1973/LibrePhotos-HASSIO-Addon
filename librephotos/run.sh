@@ -1,79 +1,59 @@
-#!/usr/bin/with-contenv bashio
-
+#!/usr/bin/env bash
 set -e
 
-bashio::log.info "=== LibrePhotos Addon startet ==="
+# Bashio laden falls verfügbar (HA), sonst Defaults nutzen
+if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
+    source /usr/lib/bashio/bashio.sh
+    SCAN_DIR=$(bashio::config 'scan_directory')
+    DB_PASS_CONF=$(bashio::config 'db_password')
+    LOG_LEVEL=$(bashio::config 'log_level')
+    bashio::log.info "=== LibrePhotos Addon startet ==="
+else
+    SCAN_DIR="${SCAN_DIRECTORY:-/media/photos}"
+    DB_PASS_CONF="${DB_PASS:-LibrePhotos1234}"
+    LOG_LEVEL="info"
+    echo "=== LibrePhotos startet (Standalone-Modus) ==="
+fi
 
-# ── Konfiguration aus HA laden ────────────────────────────────────────────────
-SCAN_DIR=$(bashio::config 'scan_directory')
-DB_PASS=$(bashio::config 'db_password')
-WORKERS=$(bashio::config 'workers')
-LOG_LEVEL=$(bashio::config 'log_level')
+echo "Fotoordner: ${SCAN_DIR}"
 
-bashio::log.info "Fotoordner: ${SCAN_DIR}"
-bashio::log.info "Worker-Anzahl: ${WORKERS}"
-
-# ── Umgebungsvariablen setzen ─────────────────────────────────────────────────
-export DB_NAME="librephotos"
-export DB_USER="librephotos"
-export DB_PASS="${DB_PASS}"
-export DB_HOST="127.0.0.1"
-export DB_PORT="5432"
+# ── Umgebungsvariablen für Supervisor ────────────────────────────────────────
+export DB_PASS="${DB_PASS_CONF}"
 export SCAN_DIRECTORY="${SCAN_DIR}"
-export ALLOWED_HOSTS="*"
-export SECRET_KEY=$(cat /data/librephotos/secret_key 2>/dev/null || openssl rand -hex 32 | tee /data/librephotos/secret_key)
-export DEBUG="false"
-export WORKERS="${WORKERS}"
-export DJANGO_LOG_LEVEL="${LOG_LEVEL}"
-export REDIS_HOST="127.0.0.1"
-export REDIS_PORT="6379"
-export PROTECTED_MEDIA_ROOT="/data/librephotos/protected_media"
-export DATA_ROOT="${SCAN_DIR}"
-export CSRF_TRUSTED_ORIGINS="http://localhost:3000,http://homeassistant.local:3000"
 
-# ── System-User anlegen ───────────────────────────────────────────────────────
-if ! id -u librephotos &>/dev/null; then
-    adduser -D -s /bin/sh librephotos
+# Persistent secret key
+SECRET_FILE=/data/librephotos/secret_key
+if [ ! -f "${SECRET_FILE}" ]; then
+    mkdir -p "$(dirname "${SECRET_FILE}")"
+    head -c 32 /dev/urandom | base64 > "${SECRET_FILE}"
+fi
+export SECRET_KEY=$(cat "${SECRET_FILE}")
+
+# ── PostgreSQL initialisieren (falls nötig) ──────────────────────────────────
+PG_DATA=/var/lib/postgresql/data
+if [ ! -f "${PG_DATA}/PG_VERSION" ]; then
+    echo "PostgreSQL Datenbank wird initialisiert..."
+    gosu postgres /usr/lib/postgresql/*/bin/initdb -D "${PG_DATA}" \
+        --locale=C --encoding=UTF8
 fi
 
-chown -R librephotos:librephotos \
-    /opt/librephotos/repo \
-    /data/librephotos
+# Postgres temporär starten zum Anlegen von User/DB
+gosu postgres /usr/lib/postgresql/*/bin/pg_ctl -D "${PG_DATA}" \
+    -l /tmp/pg_init.log -o "-c listen_addresses=127.0.0.1" start -w
 
-# ── PostgreSQL initialisieren ─────────────────────────────────────────────────
-if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
-    bashio::log.info "PostgreSQL Datenbank wird initialisiert..."
-    su-exec postgres initdb -D /var/lib/postgresql/data
-fi
+gosu postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='librephotos'" \
+    | grep -q 1 || \
+    gosu postgres psql -c "CREATE USER librephotos WITH PASSWORD '${DB_PASS}';"
 
-# PostgreSQL starten (temporär für Setup)
-su-exec postgres pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql_init.log start -w
+gosu postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='librephotos'" \
+    | grep -q 1 || \
+    gosu postgres psql -c "CREATE DATABASE librephotos OWNER librephotos;"
 
-# Datenbank und User anlegen (falls nicht vorhanden)
-su-exec postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
-    su-exec postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+gosu postgres psql -c "ALTER USER librephotos WITH PASSWORD '${DB_PASS}';"
+gosu postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE librephotos TO librephotos;"
 
-su-exec postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
-    su-exec postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};"
+gosu postgres /usr/lib/postgresql/*/bin/pg_ctl -D "${PG_DATA}" stop -w
 
-su-exec postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
-su-exec postgres pg_ctl -D /var/lib/postgresql/data stop -w
-
-# ── Django Migrations & Static Files ─────────────────────────────────────────
-bashio::log.info "Django Datenbank-Migrationen werden ausgeführt..."
-
-# Wieder starten für Migrations
-su-exec postgres pg_ctl -D /var/lib/postgresql/data -l /var/log/postgresql_init.log start -w
-sleep 2
-
-cd /opt/librephotos/repo/apps/backend
-su-exec librephotos /opt/librephotos/venv/bin/python manage.py migrate --noinput || \
-    bashio::log.warning "Migrations hatten Fehler (könnten beim ersten Start normal sein)"
-
-su-exec librephotos /opt/librephotos/venv/bin/python manage.py collectstatic --noinput 2>/dev/null || true
-
-su-exec postgres pg_ctl -D /var/lib/postgresql/data stop -w
-
-# ── Supervisor starten (alle Dienste) ─────────────────────────────────────────
-bashio::log.info "Alle Dienste werden gestartet..."
-exec /usr/bin/supervisord -c /etc/supervisord.conf
+# ── Supervisor starten ───────────────────────────────────────────────────────
+echo "Alle Dienste werden gestartet..."
+exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

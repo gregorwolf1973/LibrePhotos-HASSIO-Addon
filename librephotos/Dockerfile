@@ -1,80 +1,55 @@
 ARG BUILD_FROM
-FROM $BUILD_FROM AS base
+# BUILD_FROM wird für die HA-Build-Validation gesetzt, aber wir bauen direkt
+# auf dem offiziellen LibrePhotos-Backend-Image auf (Debian-basiert, mit
+# allen ML-Dependencies bereits vorinstalliert).
+FROM reallibrephotos/librephotos:latest
 
-# ── System packages ──────────────────────────────────────────────────────────
-RUN apk add --no-cache \
-    bash \
-    curl \
-    jq \
-    nginx \
-    postgresql16 \
-    postgresql16-contrib \
-    supervisor \
-    python3 \
-    py3-pip \
-    py3-virtualenv \
-    nodejs \
-    npm \
-    redis \
-    libmagic \
-    libheif \
-    ffmpeg \
-    imagemagick \
-    exiftool \
-    libraw \
-    tzdata \
-    shadow \
-    su-exec \
-    gcc \
-    musl-dev \
-    python3-dev \
-    libffi-dev \
-    openssl-dev \
-    postgresql16-dev
+# ── HA-Integration und zusätzliche Services ──────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        postgresql \
+        postgresql-contrib \
+        redis-server \
+        nginx \
+        supervisor \
+        curl \
+        jq \
+        ca-certificates \
+        gosu \
+    && rm -rf /var/lib/apt/lists/*
 
-# ── PostgreSQL setup ─────────────────────────────────────────────────────────
-RUN mkdir -p /var/lib/postgresql/data \
-    && chown -R postgres:postgres /var/lib/postgresql
+# ── Bashio installieren (für HA-Config-Zugriff) ───────────────────────────────
+ARG BASHIO_VERSION=0.16.2
+RUN mkdir -p /tmp/bashio && \
+    curl -J -L -o /tmp/bashio.tar.gz \
+        "https://github.com/hassio-addons/bashio/archive/v${BASHIO_VERSION}.tar.gz" && \
+    tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio && \
+    mv /tmp/bashio/lib /usr/lib/bashio && \
+    ln -s /usr/lib/bashio/bashio /usr/bin/bashio && \
+    rm -rf /tmp/bashio /tmp/bashio.tar.gz
 
-# ── LibrePhotos Monorepo clonen ───────────────────────────────────────────────
-RUN apk add --no-cache git && \
-    git clone --depth 1 https://github.com/LibrePhotos/librephotos.git /opt/librephotos/repo && \
-    apk del git
+# ── PostgreSQL: Konfiguration ────────────────────────────────────────────────
+RUN mkdir -p /var/lib/postgresql/data /var/run/postgresql && \
+    chown -R postgres:postgres /var/lib/postgresql /var/run/postgresql
 
-# Backend liegt unter apps/backend/
-WORKDIR /opt/librephotos/repo/apps/backend
+# ── Frontend (Static Build) holen ────────────────────────────────────────────
+# Das Frontend-Image enthält den fertigen Static-Build unter /usr/share/nginx/html
+# Wir kopieren ihn aus dem Frontend-Image
+COPY --from=reallibrephotos/librephotos-frontend:latest /usr/share/nginx/html /opt/librephotos/static
 
-# Install Python dependencies
-RUN python3 -m venv /opt/librephotos/venv && \
-    /opt/librephotos/venv/bin/pip install --upgrade pip && \
-    /opt/librephotos/venv/bin/pip install -r /opt/librephotos/repo/apps/backend/requirements.txt
-
-# ── LibrePhotos Frontend ──────────────────────────────────────────────────────
-RUN apk add --no-cache git && \
-    git clone --depth 1 https://github.com/LibrePhotos/librephotos-frontend.git /opt/librephotos/frontend && \
-    apk del git && \
-    cd /opt/librephotos/frontend && \
-    npm install && \
-    npm run build && \
-    mkdir -p /opt/librephotos/static && \
-    cp -r /opt/librephotos/frontend/dist/* /opt/librephotos/static/ 2>/dev/null || \
-    cp -r /opt/librephotos/frontend/build/* /opt/librephotos/static/ 2>/dev/null || true && \
-    rm -rf /opt/librephotos/frontend/node_modules
-
-# ── Nginx config ──────────────────────────────────────────────────────────────
+# ── Konfigurationsdateien ────────────────────────────────────────────────────
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY supervisord.conf /etc/supervisor/conf.d/librephotos.conf
 
-# ── Supervisor config ─────────────────────────────────────────────────────────
-COPY supervisord.conf /etc/supervisord.conf
-
-# ── Data directories ──────────────────────────────────────────────────────────
+# ── Datenverzeichnisse ───────────────────────────────────────────────────────
 RUN mkdir -p \
     /data/librephotos/protected_media \
     /data/librephotos/data \
     /data/librephotos/logs
 
-# ── Startup script ────────────────────────────────────────────────────────────
+# ── Startskript ──────────────────────────────────────────────────────────────
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
+
+EXPOSE 3000
 
 CMD ["/run.sh"]
