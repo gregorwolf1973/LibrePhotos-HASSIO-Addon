@@ -39,10 +39,28 @@ Log-Level für die Ausgaben. Standard: `info`
 ## Erste Schritte
 
 1. Addon installieren und starten
-2. Warte bis das Addon vollständig gestartet ist (ca. 2-3 Minuten beim ersten Start)
-3. Öffne das Web-Interface über das Seitenleisten-Icon
-4. Erstelle einen Admin-Account beim ersten Login
-5. Gehe zu `Einstellungen → Scan` und starte den ersten Foto-Scan
+2. Warte bis das Addon vollständig gestartet ist (ca. 5-15 Minuten beim ersten Start - ML-Modelle werden geladen)
+3. Web-Interface über den **"OPEN WEB UI"**-Button im Addon-Tab öffnen
+   (oder direkt unter `http://homeassistant.local:8001`)
+4. Login mit den konfigurierten `admin_username` / `admin_password`
+5. **Passwort sofort ändern**: User-Menü → Settings → Change Password
+6. Gehe zu `Tools → Library → Scan Photos` und starte den ersten Foto-Scan
+
+## LibrePhotos in die HA-Sidebar einbinden (optional)
+
+Da HA Ingress mit der LibrePhotos-SPA inkompatibel ist, bekommst du das
+Sidebar-Icon manuell via `panel_iframe` in deiner `configuration.yaml`:
+
+```yaml
+panel_iframe:
+  librephotos:
+    title: "LibrePhotos"
+    icon: mdi:image-multiple
+    url: "http://homeassistant.local:8001"
+    require_admin: true
+```
+
+Nach HA-Neustart erscheint LibrePhotos in der Seitenleiste.
 
 ## Speicheranforderungen
 

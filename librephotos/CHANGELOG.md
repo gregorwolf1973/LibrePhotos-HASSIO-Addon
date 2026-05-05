@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.07 (2026-05-05)
+
+### Ingress entfernt, "OPEN WEB UI"-Button stattdessen
+- `ingress: false` weil LibrePhotos' SPA hardcoded API-Pfade hat die
+  inkompatibel mit HA Ingress-URL-Prefixen sind (weißer Bildschirm)
+- `webui:` Property zeigt einen "OPEN WEB UI"-Button im Addon-Tab,
+  der direkt auf `http://homeassistant.local:8001` verlinkt
+- Optional: User können in HA's `configuration.yaml` ein `panel_iframe`
+  einrichten um LibrePhotos in die Sidebar zu bekommen
+
 ## 0.06 (2026-05-05)
 
 ### Persistenz (Breaking Change)
