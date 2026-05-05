@@ -24,11 +24,41 @@ fi
 echo "Fotoordner: ${SCAN_DIR}"
 echo "Worker: ${WORKERS_CONF}"
 
-# ── Foto-Verzeichnis nach /data verlinken (Unified-Image erwartet /data) ─────
-if [ "${SCAN_DIR}" != "/data" ] && [ -d "${SCAN_DIR}" ]; then
-    rm -rf /data 2>/dev/null || true
-    ln -sfn "${SCAN_DIR}" /data
+# ── Foto-Verzeichnis nach /data verlinken ────────────────────────────────────
+# Das unified-Image erwartet ALLE Fotos unter /data. Wir machen daraus ein
+# Sammel-Verzeichnis mit Symlinks zu allen verfügbaren HA-Pfaden, damit der
+# User in der LibrePhotos-UI zwischen den Quellen wählen kann.
+
+# Scan-Ordner auf dem Host anlegen falls fehlt
+if [ ! -d "${SCAN_DIR}" ]; then
+    echo "Lege Scan-Ordner an: ${SCAN_DIR}"
+    mkdir -p "${SCAN_DIR}" 2>/dev/null || \
+        echo "WARNUNG: ${SCAN_DIR} konnte nicht angelegt werden"
 fi
+
+# /data komplett neu aufbauen (Container-Mount, kein Persistenz-Verlust)
+rm -rf /data 2>/dev/null || true
+mkdir -p /data
+
+# Konfigurierten Scan-Ordner verlinken
+if [ -d "${SCAN_DIR}" ]; then
+    SCAN_NAME=$(basename "${SCAN_DIR}")
+    ln -sfn "${SCAN_DIR}" "/data/${SCAN_NAME}"
+    echo "Verlinkt: /data/${SCAN_NAME} -> ${SCAN_DIR}"
+fi
+
+# Standard-HA-Pfade ebenfalls anbieten falls vorhanden und nicht schon verlinkt
+for HA_PATH in /media /share; do
+    if [ -d "${HA_PATH}" ]; then
+        TARGET_NAME=$(basename "${HA_PATH}")
+        if [ ! -e "/data/${TARGET_NAME}" ]; then
+            ln -sfn "${HA_PATH}" "/data/${TARGET_NAME}"
+            echo "Verlinkt: /data/${TARGET_NAME} -> ${HA_PATH}"
+        fi
+    fi
+done
+
+ls -la /data
 
 # ── Persistent Secret Key ────────────────────────────────────────────────────
 SECRET_FILE=/data/librephotos/secret_key
