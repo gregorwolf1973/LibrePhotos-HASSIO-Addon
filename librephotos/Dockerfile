@@ -38,9 +38,11 @@ RUN mkdir -p \
     /logs \
     /data/librephotos
 
-# ── Startskript ──────────────────────────────────────────────────────────────
+# ── Startskripte ─────────────────────────────────────────────────────────────
 COPY run.sh /run.sh
-RUN chmod +x /run.sh
+COPY start-postgres.sh /start-postgres.sh
+COPY start-librephotos.sh /start-librephotos.sh
+RUN chmod +x /run.sh /start-postgres.sh /start-librephotos.sh
 
 EXPOSE 8001
 

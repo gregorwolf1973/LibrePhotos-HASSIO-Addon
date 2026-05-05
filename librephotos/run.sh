@@ -54,16 +54,6 @@ if [ ! -f "${PG_DATA}/PG_VERSION" ]; then
     echo "PostgreSQL Datenbank wird initialisiert..."
     chown -R postgres:postgres "${PG_DATA}"
     gosu postgres "${PG_BIN}/initdb" -D "${PG_DATA}" --locale=C --encoding=UTF8
-
-    # Default postgresql.conf an Standard-Pfad kopieren falls fehlt
-    PG_VER=$(cat "${PG_DATA}/PG_VERSION")
-    PG_CONF_DIR="/etc/postgresql/${PG_VER}/main"
-    if [ ! -d "${PG_CONF_DIR}" ]; then
-        mkdir -p "${PG_CONF_DIR}"
-        cp "${PG_DATA}"/postgresql.conf "${PG_CONF_DIR}/"
-        cp "${PG_DATA}"/pg_hba.conf "${PG_CONF_DIR}/"
-        chown -R postgres:postgres "${PG_CONF_DIR}"
-    fi
 fi
 
 # ── User/DB anlegen ──────────────────────────────────────────────────────────
