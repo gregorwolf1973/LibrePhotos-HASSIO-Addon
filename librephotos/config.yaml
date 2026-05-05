@@ -1,6 +1,6 @@
 name: "LibrePhotos"
 description: "Selbst gehostete Fotoverwaltung mit KI-Gesichtserkennung und automatischer Klassifizierung"
-version: "0.05"
+version: "0.06"
 url: "https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon"
 slug: "librephotos"
 init: false

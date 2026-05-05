@@ -10,7 +10,7 @@ if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
     ADMIN_USER=$(bashio::config 'admin_username')
     ADMIN_PASS=$(bashio::config 'admin_password')
     ADMIN_MAIL=$(bashio::config 'admin_email')
-    bashio::log.info "=== LibrePhotos Addon startet ==="
+    bashio::log.info "=== LibrePhotos Addon startet (v0.06) ==="
 else
     SCAN_DIR="${SCAN_DIRECTORY:-/media/photos}"
     DB_PASS_CONF="${DB_PASS:-LibrePhotos1234}"
@@ -24,11 +24,42 @@ fi
 echo "Fotoordner: ${SCAN_DIR}"
 echo "Worker: ${WORKERS_CONF}"
 
-# ── Foto-Verzeichnis nach /data verlinken ────────────────────────────────────
-# Das unified-Image erwartet ALLE Fotos unter /data. Wir machen daraus ein
-# Sammel-Verzeichnis mit Symlinks zu allen verfügbaren HA-Pfaden, damit der
-# User in der LibrePhotos-UI zwischen den Quellen wählen kann.
+# ────────────────────────────────────────────────────────────────────────────
+# PERSISTENZ-LAYOUT (v0.06)
+# Alle Daten die einen Addon-Rebuild überleben müssen, liegen unter /config:
+#
+#   /config/librephotos/
+#     ├── postgres/         PostgreSQL-Datenverzeichnis
+#     ├── protected_media/  Thumbnails, Gesichter, ML-Modelle (~5 GB)
+#     ├── cache/            Pip/HF-Modell-Downloads
+#     ├── logs/             Application logs
+#     └── secret_key        Stabiler Django SECRET_KEY (Sessions/JWT)
+#
+# /data wird vom unified-Image als Foto-Quelle erwartet → Symlinks dorthin.
+# ────────────────────────────────────────────────────────────────────────────
 
+PERSIST=/config/librephotos
+mkdir -p \
+    "${PERSIST}/postgres" \
+    "${PERSIST}/protected_media" \
+    "${PERSIST}/cache" \
+    "${PERSIST}/logs"
+
+# Container-interne Pfade auf Persist-Volume umlenken (Symlinks)
+echo "Persistenz-Pfade verlinken..."
+for pair in \
+    "/protected_media:${PERSIST}/protected_media" \
+    "/logs:${PERSIST}/logs" \
+    "/root/.cache:${PERSIST}/cache"
+do
+    SRC="${pair%%:*}"
+    DST="${pair##*:}"
+    mkdir -p "$(dirname "${SRC}")"
+    rm -rf "${SRC}" 2>/dev/null || true
+    ln -sfn "${DST}" "${SRC}"
+done
+
+# ── Foto-Verzeichnis nach /data verlinken ────────────────────────────────────
 # Scan-Ordner auf dem Host anlegen falls fehlt
 if [ ! -d "${SCAN_DIR}" ]; then
     echo "Lege Scan-Ordner an: ${SCAN_DIR}"
@@ -36,7 +67,8 @@ if [ ! -d "${SCAN_DIR}" ]; then
         echo "WARNUNG: ${SCAN_DIR} konnte nicht angelegt werden"
 fi
 
-# /data komplett neu aufbauen (Container-Mount, kein Persistenz-Verlust)
+# /data-Inhalt zurücksetzen aber HA-Bashio-options.json nicht anfassen
+# Wir bauen /data komplett neu (HA hat options.json bereits in Memory geladen)
 rm -rf /data 2>/dev/null || true
 mkdir -p /data
 
@@ -47,7 +79,7 @@ if [ -d "${SCAN_DIR}" ]; then
     echo "Verlinkt: /data/${SCAN_NAME} -> ${SCAN_DIR}"
 fi
 
-# Standard-HA-Pfade ebenfalls anbieten falls vorhanden und nicht schon verlinkt
+# Standard-HA-Pfade ebenfalls anbieten
 for HA_PATH in /media /share; do
     if [ -d "${HA_PATH}" ]; then
         TARGET_NAME=$(basename "${HA_PATH}")
@@ -61,10 +93,11 @@ done
 ls -la /data
 
 # ── Persistent Secret Key ────────────────────────────────────────────────────
-SECRET_FILE=/data/librephotos/secret_key
-mkdir -p /data/librephotos
+SECRET_FILE="${PERSIST}/secret_key"
 if [ ! -f "${SECRET_FILE}" ]; then
+    echo "Generiere neuen SECRET_KEY..."
     head -c 32 /dev/urandom | base64 > "${SECRET_FILE}"
+    chmod 600 "${SECRET_FILE}"
 fi
 
 # ── Umgebungsvariablen für Supervisor-Subprozess exportieren ─────────────────
@@ -76,13 +109,18 @@ export ADMIN_PASSWORD="${ADMIN_PASS}"
 export ADMIN_EMAIL="${ADMIN_MAIL}"
 export CSRF_TRUSTED_ORIGINS="http://homeassistant.local:8001,http://localhost:8001"
 
+# PG_DATA-Pfad für start-postgres.sh exportieren (persistent in /config)
+export PG_DATA="${PERSIST}/postgres"
+
 # ── PostgreSQL initialisieren (falls leer) ───────────────────────────────────
-PG_DATA=/var/lib/postgresql/data
 PG_BIN=$(ls -d /usr/lib/postgresql/*/bin | head -n1)
 
+# Berechtigungen sicherstellen (HA mounted /config oft als root)
+chown -R postgres:postgres "${PG_DATA}"
+chmod 700 "${PG_DATA}"
+
 if [ ! -f "${PG_DATA}/PG_VERSION" ]; then
-    echo "PostgreSQL Datenbank wird initialisiert..."
-    chown -R postgres:postgres "${PG_DATA}"
+    echo "PostgreSQL Datenbank wird in ${PG_DATA} initialisiert..."
     gosu postgres "${PG_BIN}/initdb" -D "${PG_DATA}" --locale=C --encoding=UTF8
 fi
 
