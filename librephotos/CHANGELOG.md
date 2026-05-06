@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.08 (2026-05-06)
+
+### scan_directory entfernt - Foto-Quellen werden automatisch erkannt
+- `scan_directory` Option ist weg. Es gibt nichts mehr zu konfigurieren.
+- `/media` und `/share` werden automatisch unter `/data/media` bzw.
+  `/data/share` verlinkt
+- Der User wählt in der LibrePhotos-UI direkt unter Library den Pfad
+  (z.B. `/data/media/photoprism/originals`)
+
 ## 0.07 (2026-05-05)
 
 ### Ingress entfernt, "OPEN WEB UI"-Button stattdessen

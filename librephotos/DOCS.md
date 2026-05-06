@@ -1,28 +1,28 @@
 # LibrePhotos - Home Assistant Addon
 
-## Konfiguration
+## Foto-Quellen
 
-### `scan_directory`
-Pfad zum Standard-Fotoordner. Wird beim Start automatisch unter `/data/<name>` 
-verlinkt und in der LibrePhotos-UI auswählbar.  
-Standard: `/media/photos`
+**Du musst keinen Pfad konfigurieren.** Das Addon mountet automatisch:
 
-**Zusätzlich** werden automatisch verlinkt (falls vorhanden):
 - `/data/media` → HA `/media` (alle Medien-Verzeichnisse)
 - `/data/share` → HA `/share` (geteilte Verzeichnisse)
 
-So kannst du in der LibrePhotos-UI bei "Tools → Library → Add scan directory"
-zwischen mehreren Quellen wählen.
+In der LibrePhotos-UI wählst du dann unter **User-Menü → Library → Add scan directory** den gewünschten Unterordner, z.B.:
+- `/data/media/photoprism/originals`
+- `/data/media/photos`
+- `/data/share/family-fotos`
 
-### Externe Festplatten (z.B. /mnt/sdb1)
+### Externe Festplatten (z.B. USB-Disk)
 
 HA-Addons können nicht direkt auf Host-Pfade wie `/mnt/sdb1` zugreifen. Du musst
 externe Laufwerke zuerst in Home Assistant einbinden:
 
 1. **HA Web-UI** → Settings → System → Storage
-2. **Add Drive** → wähle deine USB-Disk (sdb1)
+2. **Add Drive** → wähle deine USB-Disk
 3. Mountpoint wählen: `media` oder `share`
-4. Im Addon erscheint die Disk dann unter `/data/media/<Diskname>` bzw. `/data/share/<Diskname>`
+4. Im Addon erscheint die Disk automatisch unter `/data/media/<Diskname>`
+
+## Konfiguration
 
 ### `db_password`
 Passwort für die interne PostgreSQL-Datenbank.  

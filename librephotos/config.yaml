@@ -1,6 +1,6 @@
 name: "LibrePhotos"
 description: "Selbst gehostete Fotoverwaltung mit KI-Gesichtserkennung und automatischer Klassifizierung"
-version: "0.07"
+version: "0.08"
 url: "https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon"
 slug: "librephotos"
 init: false
@@ -9,8 +9,6 @@ arch:
   - aarch64
 startup: services
 boot: auto
-# Ingress deaktiviert: LibrePhotos' SPA hat hardcoded API-Pfade, die mit
-# HA Ingress URL-Prefixen kollidieren. Stattdessen "OPEN WEB UI"-Button.
 ingress: false
 panel_icon: "mdi:image-multiple"
 panel_title: "LibrePhotos"
@@ -18,7 +16,6 @@ webui: "http://[HOST]:[PORT:8001]"
 host_network: false
 apparmor: false
 options:
-  scan_directory: "/media/photos"
   db_password: "LibrePhotos1234"
   workers: 2
   log_level: "info"
@@ -26,7 +23,6 @@ options:
   admin_password: "admin"
   admin_email: "admin@example.com"
 schema:
-  scan_directory: str
   db_password: str
   workers: int(1,8)
   log_level: list(trace|debug|info|notice|warning|error|fatal)

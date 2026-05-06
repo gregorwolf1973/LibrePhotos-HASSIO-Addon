@@ -4,15 +4,13 @@ set -e
 # Bashio laden falls verfügbar (HA), sonst Defaults
 if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
     source /usr/lib/bashio/bashio.sh
-    SCAN_DIR=$(bashio::config 'scan_directory')
     DB_PASS_CONF=$(bashio::config 'db_password')
     WORKERS_CONF=$(bashio::config 'workers')
     ADMIN_USER=$(bashio::config 'admin_username')
     ADMIN_PASS=$(bashio::config 'admin_password')
     ADMIN_MAIL=$(bashio::config 'admin_email')
-    bashio::log.info "=== LibrePhotos Addon startet (v0.06) ==="
+    bashio::log.info "=== LibrePhotos Addon startet (v0.08) ==="
 else
-    SCAN_DIR="${SCAN_DIRECTORY:-/media/photos}"
     DB_PASS_CONF="${DB_PASS:-LibrePhotos1234}"
     WORKERS_CONF="${WORKERS:-2}"
     ADMIN_USER="${ADMIN_USERNAME:-admin}"
@@ -21,7 +19,6 @@ else
     echo "=== LibrePhotos startet (Standalone-Modus) ==="
 fi
 
-echo "Fotoordner: ${SCAN_DIR}"
 echo "Worker: ${WORKERS_CONF}"
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -59,37 +56,24 @@ do
     ln -sfn "${DST}" "${SRC}"
 done
 
-# ── Foto-Verzeichnis nach /data verlinken ────────────────────────────────────
-# Scan-Ordner auf dem Host anlegen falls fehlt
-if [ ! -d "${SCAN_DIR}" ]; then
-    echo "Lege Scan-Ordner an: ${SCAN_DIR}"
-    mkdir -p "${SCAN_DIR}" 2>/dev/null || \
-        echo "WARNUNG: ${SCAN_DIR} konnte nicht angelegt werden"
-fi
+# ── Foto-Verzeichnisse automatisch nach /data verlinken ──────────────────────
+# Das unified-Image erwartet alle Fotos unter /data. Wir verlinken einfach
+# alle verfügbaren HA-Storage-Pfade dorthin – der User wählt in der
+# LibrePhotos-UI selbst aus, welche Unterverzeichnisse gescannt werden sollen.
 
-# /data-Inhalt zurücksetzen aber HA-Bashio-options.json nicht anfassen
-# Wir bauen /data komplett neu (HA hat options.json bereits in Memory geladen)
+# /data zurücksetzen (HA-options.json wurde von bashio bereits eingelesen)
 rm -rf /data 2>/dev/null || true
 mkdir -p /data
 
-# Konfigurierten Scan-Ordner verlinken
-if [ -d "${SCAN_DIR}" ]; then
-    SCAN_NAME=$(basename "${SCAN_DIR}")
-    ln -sfn "${SCAN_DIR}" "/data/${SCAN_NAME}"
-    echo "Verlinkt: /data/${SCAN_NAME} -> ${SCAN_DIR}"
-fi
-
-# Standard-HA-Pfade ebenfalls anbieten
 for HA_PATH in /media /share; do
     if [ -d "${HA_PATH}" ]; then
         TARGET_NAME=$(basename "${HA_PATH}")
-        if [ ! -e "/data/${TARGET_NAME}" ]; then
-            ln -sfn "${HA_PATH}" "/data/${TARGET_NAME}"
-            echo "Verlinkt: /data/${TARGET_NAME} -> ${HA_PATH}"
-        fi
+        ln -sfn "${HA_PATH}" "/data/${TARGET_NAME}"
+        echo "Verlinkt: /data/${TARGET_NAME} -> ${HA_PATH}"
     fi
 done
 
+echo "── Verfügbare Foto-Quellen unter /data ──"
 ls -la /data
 
 # ── Persistent Secret Key ────────────────────────────────────────────────────
