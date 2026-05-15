@@ -1,6 +1,6 @@
 name: "LibrePhotos"
-description: "Selbst gehostete Fotoverwaltung mit KI-Gesichtserkennung und automatischer Klassifizierung"
-version: "0.08"
+description: "Self-hosted photo management with AI face recognition and automatic classification"
+version: "0.10"
 url: "https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon"
 slug: "librephotos"
 init: false
@@ -36,4 +36,4 @@ map:
 ports:
   8001/tcp: 8001
 ports_description:
-  8001/tcp: "LibrePhotos Web-Interface"
+  8001/tcp: "LibrePhotos web interface"

@@ -1,55 +1,56 @@
-# LibrePhotos - Home Assistant Addon
+# LibrePhotos – Home Assistant Add-on
 
-## Foto-Quellen
+## Photo Sources
 
-**Du musst keinen Pfad konfigurieren.** Das Addon mountet automatisch:
+**You don't need to configure a path.** The add-on automatically mounts:
 
-- `/data/media` → HA `/media` (alle Medien-Verzeichnisse)
-- `/data/share` → HA `/share` (geteilte Verzeichnisse)
+- `/data/media` → HA `/media` (all media directories)
+- `/data/share` → HA `/share` (shared directories)
 
-In der LibrePhotos-UI wählst du dann unter **User-Menü → Library → Add scan directory** den gewünschten Unterordner, z.B.:
+In the LibrePhotos UI, go to **User menu → Library → Add scan directory** and choose the sub-folder you want, e.g.:
 - `/data/media/photoprism/originals`
 - `/data/media/photos`
-- `/data/share/family-fotos`
+- `/data/share/family-photos`
 
-### Externe Festplatten (z.B. USB-Disk)
+### External drives (e.g. USB disks)
 
-HA-Addons können nicht direkt auf Host-Pfade wie `/mnt/sdb1` zugreifen. Du musst
-externe Laufwerke zuerst in Home Assistant einbinden:
+HA add-ons cannot access raw host paths like `/mnt/sdb1` directly. Mount external drives in Home Assistant first:
 
-1. **HA Web-UI** → Settings → System → Storage
-2. **Add Drive** → wähle deine USB-Disk
-3. Mountpoint wählen: `media` oder `share`
-4. Im Addon erscheint die Disk automatisch unter `/data/media/<Diskname>`
+1. **HA Web UI** → Settings → System → Storage
+2. **Add Drive** → pick your USB disk
+3. Mount point: `media` or `share`
+4. The disk shows up inside the add-on under `/data/media/<DiskName>`
 
-## Konfiguration
+## Configuration
 
 ### `db_password`
-Passwort für die interne PostgreSQL-Datenbank.  
-**Wichtig:** Ändere das Standardpasswort vor dem ersten Start!
+Password for the internal PostgreSQL database.
+**Important:** change the default password before first start!
 
 ### `workers`
-Anzahl der Gunicorn-Worker-Prozesse (1-8).  
-- 2 Worker: empfohlen für Systeme mit 4GB RAM
-- 4 Worker: empfohlen für Systeme mit 8GB RAM
+Number of Gunicorn worker processes (1–8).
+- 2 workers: recommended for systems with 4 GB RAM
+- 4 workers: recommended for systems with 8 GB RAM
 
 ### `log_level`
-Log-Level für die Ausgaben. Standard: `info`
+Log verbosity. Default: `info`.
 
-## Erste Schritte
+### `admin_username` / `admin_password` / `admin_email`
+Credentials of the initial superuser account that is created on first start.
 
-1. Addon installieren und starten
-2. Warte bis das Addon vollständig gestartet ist (ca. 5-15 Minuten beim ersten Start - ML-Modelle werden geladen)
-3. Web-Interface über den **"OPEN WEB UI"**-Button im Addon-Tab öffnen
-   (oder direkt unter `http://homeassistant.local:8001`)
-4. Login mit den konfigurierten `admin_username` / `admin_password`
-5. **Passwort sofort ändern**: User-Menü → Settings → Change Password
-6. Gehe zu `Tools → Library → Scan Photos` und starte den ersten Foto-Scan
+## Getting Started
 
-## LibrePhotos in die HA-Sidebar einbinden (optional)
+1. Install and start the add-on
+2. Wait until it has fully started (5–15 minutes on first start – ML models are downloaded)
+3. Open the web interface via the **"OPEN WEB UI"** button on the add-on tab
+   (or directly at `http://homeassistant.local:8001`)
+4. Log in with the configured `admin_username` / `admin_password`
+5. **Change the password immediately**: User menu → Settings → Change Password
+6. Go to **Tools → Library → Scan Photos** and start the first photo scan
 
-Da HA Ingress mit der LibrePhotos-SPA inkompatibel ist, bekommst du das
-Sidebar-Icon manuell via `panel_iframe` in deiner `configuration.yaml`:
+## Adding LibrePhotos to the HA Sidebar (optional)
+
+Because HA Ingress is incompatible with the LibrePhotos SPA, add a sidebar icon manually via `panel_iframe` in your `configuration.yaml`:
 
 ```yaml
 panel_iframe:
@@ -60,27 +61,50 @@ panel_iframe:
     require_admin: true
 ```
 
-Nach HA-Neustart erscheint LibrePhotos in der Seitenleiste.
+After an HA restart LibrePhotos appears in the sidebar.
 
-## Speicheranforderungen
+## Storage Requirements
 
-- **RAM**: Mindestens 4 GB (8 GB empfohlen)
-- **CPU**: Mindestens 2 Kerne
-- **Speicher**: 10 GB + Größe der Fotobibliothek
+- **RAM**: at least 4 GB (8 GB recommended)
+- **CPU**: at least 2 cores
+- **Disk**: 10 GB + size of your photo library
 
-## Bekannte Einschränkungen
+## Persistence
 
-- GPU-Beschleunigung für KI-Erkennung wird nicht unterstützt
-- Der erste Start und der erste Scan können mehrere Minuten dauern
-- Gesichtserkennung und Szenenklassifizierung benötigen viel CPU-Zeit
+All persistent state lives under `/config/librephotos/`:
 
-## Fehlerbehebung
+- `postgres/` – PostgreSQL data directory
+- `protected_media/` – thumbnails, faces, ML models
+- `cache/` – model downloads (HuggingFace, pip)
+- `logs/`
+- `secret_key` – stable Django SECRET_KEY (sessions / JWT)
 
-### Addon startet nicht
-Überprüfe ob der `scan_directory` Pfad existiert und lesbar ist.
+Add-on updates and rebuilds **do not** wipe your database or thumbnails. Home Assistant snapshots automatically include all LibrePhotos data via `/config`.
 
-### Webinterface nicht erreichbar
-Warte 2-3 Minuten nach dem Start. Die Initialisierung beim ersten Start dauert länger.
+## Known Limitations
 
-### Fotos werden nicht gefunden
-Stelle sicher dass der Pfad in `scan_directory` korrekt ist und das Addon Leserechte hat.
+- No GPU acceleration for the ML models
+- First start and first full scan can take several minutes
+- Face recognition and scene classification are CPU-heavy
+- Nominatim public API is rate-limited to ~1 request/sec → reverse-geocoding 10 000 photos takes ~3 h
+- Thumbnail generation may fail for some niche RAW formats or video codecs – affected files remain visible but without a thumbnail
+
+## Troubleshooting
+
+### Add-on does not start
+Check the add-on log. Common causes: low disk space under `/config`, corrupted PostgreSQL data directory.
+
+### Web interface unreachable
+Wait 2–3 minutes after start. First-time initialisation takes longer than a normal restart.
+
+### Places ("Orte") stays empty although photos have GPS data
+Make sure **Map API Provider** is set to `nominatim` (Settings page in the UI). Then trigger a full **Library → Rescan Photos**. Reverse geocoding runs through the Django-Q worker queue and respects the Nominatim rate limit.
+
+### "Photo has no thumbnail" errors during face scan
+Some video / RAW / HEIC files cannot be thumbnailed inside the container. They do not break the scan – LibrePhotos skips them.
+
+## Support
+
+If this add-on helps you, consider buying me a coffee:
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)

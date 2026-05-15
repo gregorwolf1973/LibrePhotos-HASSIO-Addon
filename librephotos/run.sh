@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# Bashio laden falls verfügbar (HA), sonst Defaults
+# Load bashio if available (HA), otherwise fall back to defaults
 if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
     source /usr/lib/bashio/bashio.sh
     DB_PASS_CONF=$(bashio::config 'db_password')
@@ -9,30 +9,30 @@ if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
     ADMIN_USER=$(bashio::config 'admin_username')
     ADMIN_PASS=$(bashio::config 'admin_password')
     ADMIN_MAIL=$(bashio::config 'admin_email')
-    bashio::log.info "=== LibrePhotos Addon startet (v0.08) ==="
+    bashio::log.info "=== LibrePhotos add-on starting (v0.10) ==="
 else
     DB_PASS_CONF="${DB_PASS:-LibrePhotos1234}"
     WORKERS_CONF="${WORKERS:-2}"
     ADMIN_USER="${ADMIN_USERNAME:-admin}"
     ADMIN_PASS="${ADMIN_PASSWORD:-admin}"
     ADMIN_MAIL="${ADMIN_EMAIL:-admin@example.com}"
-    echo "=== LibrePhotos startet (Standalone-Modus) ==="
+    echo "=== LibrePhotos starting (standalone mode) ==="
 fi
 
-echo "Worker: ${WORKERS_CONF}"
+echo "Workers: ${WORKERS_CONF}"
 
 # ────────────────────────────────────────────────────────────────────────────
-# PERSISTENZ-LAYOUT (v0.06)
-# Alle Daten die einen Addon-Rebuild überleben müssen, liegen unter /config:
+# PERSISTENCE LAYOUT (since v0.06)
+# All data that must survive an add-on rebuild lives under /config:
 #
 #   /config/librephotos/
-#     ├── postgres/         PostgreSQL-Datenverzeichnis
-#     ├── protected_media/  Thumbnails, Gesichter, ML-Modelle (~5 GB)
-#     ├── cache/            Pip/HF-Modell-Downloads
-#     ├── logs/             Application logs
-#     └── secret_key        Stabiler Django SECRET_KEY (Sessions/JWT)
+#     ├── postgres/         PostgreSQL data directory
+#     ├── protected_media/  thumbnails, faces, ML models (~5 GB)
+#     ├── cache/            pip / HuggingFace model downloads
+#     ├── logs/             application logs
+#     └── secret_key        stable Django SECRET_KEY (sessions / JWT)
 #
-# /data wird vom unified-Image als Foto-Quelle erwartet → Symlinks dorthin.
+# /data is what the unified image expects as the photo source → symlinks there.
 # ────────────────────────────────────────────────────────────────────────────
 
 PERSIST=/config/librephotos
@@ -42,8 +42,8 @@ mkdir -p \
     "${PERSIST}/cache" \
     "${PERSIST}/logs"
 
-# Container-interne Pfade auf Persist-Volume umlenken (Symlinks)
-echo "Persistenz-Pfade verlinken..."
+# Redirect container-internal paths to the persistent volume (symlinks)
+echo "Linking persistence paths..."
 for pair in \
     "/protected_media:${PERSIST}/protected_media" \
     "/logs:${PERSIST}/logs" \
@@ -56,12 +56,12 @@ do
     ln -sfn "${DST}" "${SRC}"
 done
 
-# ── Foto-Verzeichnisse automatisch nach /data verlinken ──────────────────────
-# Das unified-Image erwartet alle Fotos unter /data. Wir verlinken einfach
-# alle verfügbaren HA-Storage-Pfade dorthin – der User wählt in der
-# LibrePhotos-UI selbst aus, welche Unterverzeichnisse gescannt werden sollen.
+# ── Auto-link photo directories under /data ─────────────────────────────────
+# The unified image expects all photos under /data. We expose every
+# available HA storage path there – the user picks the sub-directory to scan
+# from the LibrePhotos UI.
 
-# /data zurücksetzen (HA-options.json wurde von bashio bereits eingelesen)
+# Reset /data (bashio has already parsed HA options.json above)
 rm -rf /data 2>/dev/null || true
 mkdir -p /data
 
@@ -69,22 +69,22 @@ for HA_PATH in /media /share; do
     if [ -d "${HA_PATH}" ]; then
         TARGET_NAME=$(basename "${HA_PATH}")
         ln -sfn "${HA_PATH}" "/data/${TARGET_NAME}"
-        echo "Verlinkt: /data/${TARGET_NAME} -> ${HA_PATH}"
+        echo "Linked: /data/${TARGET_NAME} -> ${HA_PATH}"
     fi
 done
 
-echo "── Verfügbare Foto-Quellen unter /data ──"
+echo "── Available photo sources under /data ──"
 ls -la /data
 
-# ── Persistent Secret Key ────────────────────────────────────────────────────
+# ── Persistent secret key ───────────────────────────────────────────────────
 SECRET_FILE="${PERSIST}/secret_key"
 if [ ! -f "${SECRET_FILE}" ]; then
-    echo "Generiere neuen SECRET_KEY..."
+    echo "Generating new SECRET_KEY..."
     head -c 32 /dev/urandom | base64 > "${SECRET_FILE}"
     chmod 600 "${SECRET_FILE}"
 fi
 
-# ── Umgebungsvariablen für Supervisor-Subprozess exportieren ─────────────────
+# ── Export env vars for the supervisor sub-process ──────────────────────────
 export DB_PASS="${DB_PASS_CONF}"
 export SECRET_KEY="$(cat "${SECRET_FILE}")"
 export WORKERS="${WORKERS_CONF}"
@@ -93,23 +93,23 @@ export ADMIN_PASSWORD="${ADMIN_PASS}"
 export ADMIN_EMAIL="${ADMIN_MAIL}"
 export CSRF_TRUSTED_ORIGINS="http://homeassistant.local:8001,http://localhost:8001"
 
-# PG_DATA-Pfad für start-postgres.sh exportieren (persistent in /config)
+# PG_DATA path for start-postgres.sh (persistent in /config)
 export PG_DATA="${PERSIST}/postgres"
 
-# ── PostgreSQL initialisieren (falls leer) ───────────────────────────────────
+# ── Initialise PostgreSQL (if empty) ────────────────────────────────────────
 PG_BIN=$(ls -d /usr/lib/postgresql/*/bin | head -n1)
 
-# Berechtigungen sicherstellen (HA mounted /config oft als root)
+# Make sure permissions are correct (HA often mounts /config as root)
 chown -R postgres:postgres "${PG_DATA}"
 chmod 700 "${PG_DATA}"
 
 if [ ! -f "${PG_DATA}/PG_VERSION" ]; then
-    echo "PostgreSQL Datenbank wird in ${PG_DATA} initialisiert..."
+    echo "Initialising PostgreSQL database in ${PG_DATA}..."
     gosu postgres "${PG_BIN}/initdb" -D "${PG_DATA}" --locale=C --encoding=UTF8
 fi
 
-# ── User/DB anlegen ──────────────────────────────────────────────────────────
-echo "PostgreSQL temporär starten zum Anlegen von User/DB..."
+# ── Create user / database ──────────────────────────────────────────────────
+echo "Starting PostgreSQL temporarily to create user/database..."
 gosu postgres "${PG_BIN}/pg_ctl" -D "${PG_DATA}" \
     -l /tmp/pg_init.log -o "-c listen_addresses=127.0.0.1" start -w
 
@@ -126,6 +126,6 @@ gosu postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE librephotos TO librephot
 
 gosu postgres "${PG_BIN}/pg_ctl" -D "${PG_DATA}" stop -w
 
-# ── Supervisor starten ───────────────────────────────────────────────────────
-echo "Alle Dienste werden gestartet..."
+# ── Start supervisor ────────────────────────────────────────────────────────
+echo "Starting all services..."
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
