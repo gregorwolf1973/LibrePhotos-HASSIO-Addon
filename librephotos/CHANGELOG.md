@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11 (2026-05-15)
+
+### Add-on logo and icon
+- Added `icon.png` (square) and `logo.png` (with text) – sourced from the
+  official LibrePhotos frontend repo so the add-on tile shows the proper
+  branding in the HA Add-on Store and sidebar
+
 ## 0.10 (2026-05-15)
 
 ### Documentation translated to English
