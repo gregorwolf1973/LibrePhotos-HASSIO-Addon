@@ -9,17 +9,34 @@ if command -v bashio &>/dev/null && [ -f /data/options.json ]; then
     ADMIN_USER=$(bashio::config 'admin_username')
     ADMIN_PASS=$(bashio::config 'admin_password')
     ADMIN_MAIL=$(bashio::config 'admin_email')
-    bashio::log.info "=== LibrePhotos add-on starting (v0.10) ==="
+    LOG_LEVEL_CONF=$(bashio::config 'log_level')
+    if bashio::config.has_value 'log_level'; then
+        bashio::log.level "${LOG_LEVEL_CONF}"
+    fi
+    bashio::log.info "=== LibrePhotos add-on starting (v0.12) ==="
 else
     DB_PASS_CONF="${DB_PASS:-LibrePhotos1234}"
     WORKERS_CONF="${WORKERS:-2}"
     ADMIN_USER="${ADMIN_USERNAME:-admin}"
     ADMIN_PASS="${ADMIN_PASSWORD:-admin}"
     ADMIN_MAIL="${ADMIN_EMAIL:-admin@example.com}"
+    LOG_LEVEL_CONF="${LOG_LEVEL:-info}"
     echo "=== LibrePhotos starting (standalone mode) ==="
 fi
 
 echo "Workers: ${WORKERS_CONF}"
+
+# ── Map the add-on log level to the backend's LOG_LEVEL ─────────────────────
+# LibrePhotos reads LOG_LEVEL (Python logging names) from the environment.
+case "$(echo "${LOG_LEVEL_CONF}" | tr '[:upper:]' '[:lower:]')" in
+    trace|debug) LP_LOG_LEVEL="DEBUG" ;;
+    notice|info) LP_LOG_LEVEL="INFO" ;;
+    warning)     LP_LOG_LEVEL="WARNING" ;;
+    error)       LP_LOG_LEVEL="ERROR" ;;
+    fatal)       LP_LOG_LEVEL="CRITICAL" ;;
+    *)           LP_LOG_LEVEL="INFO" ;;
+esac
+echo "Log level: ${LOG_LEVEL_CONF} (backend LOG_LEVEL=${LP_LOG_LEVEL})"
 
 # ────────────────────────────────────────────────────────────────────────────
 # PERSISTENCE LAYOUT (since v0.06)
@@ -91,6 +108,7 @@ export WORKERS="${WORKERS_CONF}"
 export ADMIN_USERNAME="${ADMIN_USER}"
 export ADMIN_PASSWORD="${ADMIN_PASS}"
 export ADMIN_EMAIL="${ADMIN_MAIL}"
+export LP_LOG_LEVEL
 export CSRF_TRUSTED_ORIGINS="http://homeassistant.local:8001,http://localhost:8001"
 
 # PG_DATA path for start-postgres.sh (persistent in /config)

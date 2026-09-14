@@ -8,7 +8,7 @@ Run [LibrePhotos](https://github.com/LibrePhotos/librephotos) – a self-hosted,
 
 ### [LibrePhotos](./librephotos)
 
-Self-hosted photo management with AI face recognition, automatic scene/object tagging, map view, RAW/HEIC/video support and full-text search. PostgreSQL, Redis and the LibrePhotos backend + frontend are bundled in a single supervised container.
+Self-hosted photo management with AI face recognition, automatic scene/object tagging, map view, RAW/HEIC/video support and full-text search. PostgreSQL and the LibrePhotos backend + frontend are bundled in a single supervised container – no external database or broker is required (background jobs run through Django-Q using the PostgreSQL database, so no Redis is needed).
 
 ## Installation
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12 (2026-09-14)
+
+### `log_level` is now actually used
+- `run.sh` sets the bashio log level from the option and maps it to the
+  backend's `LOG_LEVEL` (`trace`/`debug` → `DEBUG`, `info`/`notice` → `INFO`,
+  `warning` → `WARNING`, `error` → `ERROR`, `fatal` → `CRITICAL`), which
+  `supervisord.conf` passes to the LibrePhotos process
+- Start-up banner no longer hard-codes the old version `v0.10`
+
+### Documentation
+- Sidebar integration no longer uses the removed `panel_iframe:` YAML
+  integration – documented via a dashboard with a **Webpage** card instead
+  (the add-on runs without Ingress, so it has no "Show in sidebar" toggle)
+- Scan-folder menu path is now consistent everywhere: **user menu (avatar,
+  top right) → Library** (matches the upstream LibrePhotos documentation)
+- Root README no longer claims a bundled Redis – the container runs
+  PostgreSQL plus the LibrePhotos backend/frontend; background jobs use
+  Django-Q with the database as broker
+- "Buy Me A Coffee" button moved to the top of `DOCS.md`
+
 ## 0.11 (2026-05-15)
 
 ### Add-on logo and icon

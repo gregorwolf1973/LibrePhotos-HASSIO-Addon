@@ -34,7 +34,7 @@ You don't need to configure any path. The add-on automatically links:
 - `/data/media` → Home Assistant `/media`
 - `/data/share` → Home Assistant `/share`
 
-In the LibrePhotos UI, pick the desired sub-folder under **User menu → Library → Add scan directory**.
+In the LibrePhotos UI, pick the desired sub-folder under the **user menu (avatar, top right) → Library**.
 
 ## Source
 

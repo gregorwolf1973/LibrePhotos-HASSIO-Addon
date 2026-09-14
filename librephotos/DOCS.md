@@ -1,5 +1,7 @@
 # LibrePhotos – Home Assistant Add-on
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+
 ## Photo Sources
 
 **You don't need to configure a path.** The add-on automatically mounts:
@@ -7,7 +9,7 @@
 - `/data/media` → HA `/media` (all media directories)
 - `/data/share` → HA `/share` (shared directories)
 
-In the LibrePhotos UI, go to **User menu → Library → Add scan directory** and choose the sub-folder you want, e.g.:
+In the LibrePhotos UI, open the **user menu (avatar, top right) → Library** and set the scan directory there (it is also offered during the first-time setup). Choose the sub-folder you want, e.g.:
 - `/data/media/photoprism/originals`
 - `/data/media/photos`
 - `/data/share/family-photos`
@@ -33,7 +35,10 @@ Number of Gunicorn worker processes (1–8).
 - 4 workers: recommended for systems with 8 GB RAM
 
 ### `log_level`
-Log verbosity. Default: `info`.
+Log verbosity. Default: `info`. Applies to the add-on's start-up script and is
+passed to the LibrePhotos backend as its `LOG_LEVEL` (`trace`/`debug` → `DEBUG`,
+`info`/`notice` → `INFO`, `warning` → `WARNING`, `error` → `ERROR`,
+`fatal` → `CRITICAL`). Takes effect after an add-on restart.
 
 ### `admin_username` / `admin_password` / `admin_email`
 Credentials of the initial superuser account that is created on first start.
@@ -45,23 +50,26 @@ Credentials of the initial superuser account that is created on first start.
 3. Open the web interface via the **"OPEN WEB UI"** button on the add-on tab
    (or directly at `http://homeassistant.local:8001`)
 4. Log in with the configured `admin_username` / `admin_password`
-5. **Change the password immediately**: User menu → Settings → Change Password
-6. Go to **Tools → Library → Scan Photos** and start the first photo scan
+5. **Change the password immediately**: user menu (avatar, top right) → Settings → Change Password
+6. Open the **user menu (avatar, top right) → Library** and start the first scan
+   in the **Scan Library** row
 
 ## Adding LibrePhotos to the HA Sidebar (optional)
 
-Because HA Ingress is incompatible with the LibrePhotos SPA, add a sidebar icon manually via `panel_iframe` in your `configuration.yaml`:
+The add-on runs without Ingress (the LibrePhotos SPA is incompatible with it),
+so there is no "Show in sidebar" toggle on the add-on page. The old
+`panel_iframe:` YAML integration no longer exists in current Home Assistant
+versions – use a dashboard with a webpage card instead:
 
-```yaml
-panel_iframe:
-  librephotos:
-    title: "LibrePhotos"
-    icon: mdi:image-multiple
-    url: "http://homeassistant.local:8001"
-    require_admin: true
-```
+1. **Settings → Dashboards → Add dashboard → New dashboard from scratch**
+   Give it the name "LibrePhotos", pick an icon (e.g. `mdi:image-multiple`)
+   and enable **Show in sidebar**.
+2. Open the new dashboard → **Edit** (pencil) → **Add card → Webpage**.
+3. URL: `http://homeassistant.local:8001` (or your HA host's IP and port 8001).
+4. Set the card to full height (card configuration → *Aspect ratio*, or use a
+   panel view: **Edit dashboard → view settings → View type: Panel (1 card)**).
 
-After an HA restart LibrePhotos appears in the sidebar.
+The dashboard then appears in the sidebar and shows LibrePhotos directly.
 
 ## Storage Requirements
 
@@ -105,6 +113,4 @@ Some video / RAW / HEIC files cannot be thumbnailed inside the container. They d
 
 ## Support
 
-If this add-on helps you, consider buying me a coffee:
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+If this add-on helps you, consider [buying me a coffee](https://buymeacoffee.com/gregorwolf1973).
