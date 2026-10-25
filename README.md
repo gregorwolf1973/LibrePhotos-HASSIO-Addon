@@ -1,6 +1,6 @@
 # LibrePhotos – Home Assistant Add-on Repository
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)
 
 Run [LibrePhotos](https://github.com/LibrePhotos/librephotos) – a self-hosted, open-source photo management platform with AI-powered face recognition, scene classification and timeline view – as a native Home Assistant add-on.
 
@@ -39,4 +39,4 @@ See [librephotos/README.md](librephotos/README.md) for the feature list and [lib
 
 If this add-on saves you time, consider buying me a coffee:
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)

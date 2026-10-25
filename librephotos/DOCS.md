@@ -1,6 +1,6 @@
 # LibrePhotos – Home Assistant Add-on
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)
 
 ## Photo Sources
 
@@ -113,4 +113,4 @@ Some video / RAW / HEIC files cannot be thumbnailed inside the container. They d
 
 ## Support
 
-If this add-on helps you, consider [buying me a coffee](https://buymeacoffee.com/gregorwolf1973).
+If this add-on helps you, consider [buying me a coffee](https://buymeacoffee.com/gregorwolf1973) or donating via [Liberapay](https://liberapay.com/Gregor_Wolf/donate).
