@@ -2,17 +2,37 @@ ARG BUILD_FROM
 # Wir nutzen das offizielle "unified" LibrePhotos-Image als Basis.
 # Dieses enthält bereits Backend (Django) + Frontend (statisch) und
 # serviert beides auf Port 8001 mit SERVE_FRONTEND=true.
-FROM reallibrephotos/librephotos-unified:latest
+# Feste Version statt :latest – sonst bemerkt Home Assistant neue
+# LibrePhotos-Versionen nicht und baut nicht neu.
+FROM reallibrephotos/librephotos-unified:1.6.0
 
 # ── PostgreSQL und Supervisor zusätzlich installieren ────────────────────────
+# PG_MAJOR ist die Version, mit der die Datenbank läuft. PG_OLD_MAJORS werden
+# nur mitinstalliert, damit run.sh ältere Datenbanken per pg_upgrade anheben
+# kann (Add-on <= 0.12 lief je nach Bauzeitpunkt mit PostgreSQL 16).
+# Beides kommt aus dem offiziellen PostgreSQL-Repo (apt.postgresql.org).
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ENV PG_MAJOR=18 \
+    PG_OLD_MAJORS="16"
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        postgresql \
-        postgresql-contrib \
+        curl \
+        ca-certificates \
+        gnupg \
+    && . /etc/os-release \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && mkdir -p /etc/postgresql-common/createcluster.d \
+    && echo "create_main_cluster = false" > /etc/postgresql-common/createcluster.d/no-main.conf \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        "postgresql-${PG_MAJOR}" \
+        $(for v in ${PG_OLD_MAJORS}; do echo "postgresql-${v}"; done) \
         supervisor \
         gosu \
-        curl \
         jq \
-        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Bashio installieren (für HA-Config-Zugriff) ───────────────────────────────

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.13 (2026-11-15)
+
+### LibrePhotos 1.6.0
+- The base image is now pinned to `librephotos-unified:1.6.0` instead of
+  `:latest`. With `:latest`, Home Assistant never noticed new LibrePhotos
+  releases and kept the old build. 1.6.0 brings the redesigned web app and
+  fixes security problems in sharing and user management – see the
+  [release notes](https://github.com/LibrePhotos/librephotos/releases/tag/1.6.0)
+
+### Automatic PostgreSQL upgrade
+- Since LibrePhotos 1.2 the base image is Ubuntu 26.04 with PostgreSQL 18.
+  Installations built earlier have a PostgreSQL 16 database, which
+  PostgreSQL 18 cannot open
+- PostgreSQL now comes from the official repository (apt.postgresql.org)
+  with a fixed major version (18), so it no longer changes with the base image
+- On the first start, an older database is upgraded with `pg_upgrade`. The
+  original stays untouched in `/config/librephotos/postgres-16.bak`; delete
+  it once everything works
+
 ## 0.12 (2026-09-14)
 
 ### `log_level` is now actually used

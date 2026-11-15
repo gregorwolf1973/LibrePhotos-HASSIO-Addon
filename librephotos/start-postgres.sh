@@ -6,9 +6,11 @@ set -e
 
 # Default falls PG_DATA nicht gesetzt (Container-Standalone)
 PG_DATA="${PG_DATA:-/config/librephotos/postgres}"
-PG_BIN=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | head -n1)
+# Feste Hauptversion aus dem Dockerfile; die älteren Versionen im Image sind
+# nur für pg_upgrade da und dürfen hier nicht gewählt werden.
+PG_BIN="/usr/lib/postgresql/${PG_MAJOR:-18}/bin"
 
-if [ -z "${PG_BIN}" ]; then
+if [ ! -x "${PG_BIN}/postgres" ]; then
     echo "FEHLER: Keine PostgreSQL-Installation gefunden!" >&2
     exit 1
 fi
