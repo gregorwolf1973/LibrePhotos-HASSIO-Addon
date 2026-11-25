@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14
+- Prebuilt images from GitHub Container Registry: installs and updates no
+  longer build locally.
+
 ## 0.13 (2026-11-15)
 
 ### LibrePhotos 1.6.0
