@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Experimental / not recommended.** For managing your photos in Home Assistant please use the **[Fotoarchiv](https://github.com/gregorwolf1973/fotoarchiv-addon)** add-on instead (also in the store [gregorwolf1973/ha-addons](https://github.com/gregorwolf1973/ha-addons)). It is actively maintained, faster and offers face recognition, search and duplicate detection.
+
 # LibrePhotos – Home Assistant Add-on Repository
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)
